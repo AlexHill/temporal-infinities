@@ -1,390 +1,122 @@
+import csv
 import datetime as dt
+import operator
 
-from pytest import raises
+import pytest
+import pytz
 
-from siqtv.player.time_infinities import DATETIME_NEG_INF, DATETIME_POS_INF, TIMEDELTA_NEG_INF, TIMEDELTA_POS_INF
+from temporal_infinities import (
+    DATE_NEG_INF,
+    DATE_POS_INF,
+    DATETIME_NEG_INF,
+    DATETIME_POS_INF,
+    TIMEDELTA_NEG_INF,
+    TIMEDELTA_POS_INF,
+    TemporalInfinity,
+    TimedeltaInfinity,
+    is_finite,
+)
+
+operand_map = {
+    (dt.datetime, "NEG_INF"): DATETIME_NEG_INF,
+    (dt.datetime, "POS_INF"): DATETIME_POS_INF,
+    (dt.datetime, "FINITE"): dt.datetime.now(),
+    (dt.datetime, "DELTA_NEG_INF"): TIMEDELTA_NEG_INF,
+    (dt.datetime, "DELTA_POS_INF"): TIMEDELTA_POS_INF,
+    (dt.datetime, "DELTA_FINITE"): dt.timedelta(),
+    (dt.date, "NEG_INF"): DATE_NEG_INF,
+    (dt.date, "POS_INF"): DATE_POS_INF,
+    (dt.date, "FINITE"): dt.date.today(),
+    (dt.date, "DELTA_NEG_INF"): TIMEDELTA_NEG_INF,
+    (dt.date, "DELTA_POS_INF"): TIMEDELTA_POS_INF,
+    (dt.date, "DELTA_FINITE"): dt.timedelta(),
+}
 
 
-def test_infinities():
-    datetime = dt.datetime.now()
-    timedelta = dt.timedelta(days=1)
+def idfn(val):
+    if isinstance(val, dt.datetime):
+        return "datetime"
+    if isinstance(val, dt.date):
+        return "date"
+    if isinstance(val, dt.timedelta):
+        return "timedelta"
+    if isinstance(val, TemporalInfinity):
+        return repr(val)
+    if isinstance(val, TimedeltaInfinity):
+        return repr(val)
+    if isinstance(val, type):
+        return val.__name__
 
-    assert not DATETIME_NEG_INF < DATETIME_NEG_INF
-    assert DATETIME_NEG_INF <= DATETIME_NEG_INF
-    assert not DATETIME_NEG_INF > DATETIME_NEG_INF
-    assert DATETIME_NEG_INF >= DATETIME_NEG_INF
-    assert DATETIME_NEG_INF == DATETIME_NEG_INF
-    assert not DATETIME_NEG_INF != DATETIME_NEG_INF
-    with raises(TypeError):
-        assert DATETIME_NEG_INF + DATETIME_NEG_INF
-    with raises(TypeError):
-        assert DATETIME_NEG_INF - DATETIME_NEG_INF
 
-    assert DATETIME_NEG_INF < DATETIME_POS_INF
-    assert DATETIME_NEG_INF <= DATETIME_POS_INF
-    assert not DATETIME_NEG_INF > DATETIME_POS_INF
-    assert not DATETIME_NEG_INF >= DATETIME_POS_INF
-    assert not DATETIME_NEG_INF == DATETIME_POS_INF
-    assert DATETIME_NEG_INF != DATETIME_POS_INF
-    with raises(TypeError):
-        assert DATETIME_NEG_INF + DATETIME_POS_INF
-    assert DATETIME_NEG_INF - DATETIME_POS_INF == TIMEDELTA_NEG_INF
+def gen_params():
+    def resolve(ctx, val):
+        if val == "True":
+            return True
+        if val == "False":
+            return False
+        if val == "":
+            return TypeError
+        return operand_map[(ctx, val)]
 
-    with raises(TypeError):
-        assert DATETIME_NEG_INF < TIMEDELTA_NEG_INF
-    with raises(TypeError):
-        assert DATETIME_NEG_INF <= TIMEDELTA_NEG_INF
-    with raises(TypeError):
-        assert DATETIME_NEG_INF > TIMEDELTA_NEG_INF
-    with raises(TypeError):
-        assert DATETIME_NEG_INF >= TIMEDELTA_NEG_INF
-    assert not DATETIME_NEG_INF == TIMEDELTA_NEG_INF
-    assert DATETIME_NEG_INF != TIMEDELTA_NEG_INF
-    assert DATETIME_NEG_INF + TIMEDELTA_NEG_INF == DATETIME_NEG_INF
-    with raises(TypeError):
-        assert DATETIME_NEG_INF - TIMEDELTA_NEG_INF
+    def uniq(it):
+        vals = set()
+        for v in it:
+            if not v in vals:
+                vals.add(v)
+                yield v
 
-    with raises(TypeError):
-        assert DATETIME_NEG_INF < TIMEDELTA_POS_INF
-    with raises(TypeError):
-        assert DATETIME_NEG_INF <= TIMEDELTA_POS_INF
-    with raises(TypeError):
-        assert DATETIME_NEG_INF > TIMEDELTA_POS_INF
-    with raises(TypeError):
-        assert DATETIME_NEG_INF >= TIMEDELTA_POS_INF
-    assert not DATETIME_NEG_INF == TIMEDELTA_POS_INF
-    assert DATETIME_NEG_INF != TIMEDELTA_POS_INF
-    with raises(TypeError):
-        assert DATETIME_NEG_INF + TIMEDELTA_POS_INF
-    assert DATETIME_NEG_INF - TIMEDELTA_POS_INF == DATETIME_NEG_INF
+    with open("test_matrix.csv") as f:
+        rdr = csv.reader(f)
+        operands = next(rdr)[2:]
+        return list(
+            uniq(
+                (resolve(ctx, lhs), op, resolve(ctx, rhs), resolve(ctx, expect))
+                for lhs, op, *results in rdr
+                for ctx in set(k[0] for k in operand_map)
+                for rhs, expect in zip(operands, results)
+            )
+        )
 
-    assert DATETIME_NEG_INF < datetime
-    assert DATETIME_NEG_INF <= datetime
-    assert not DATETIME_NEG_INF > datetime
-    assert not DATETIME_NEG_INF >= datetime
-    assert not DATETIME_NEG_INF == datetime
-    assert DATETIME_NEG_INF != datetime
-    with raises(TypeError):
-        assert DATETIME_NEG_INF + datetime
-    assert DATETIME_NEG_INF - datetime == TIMEDELTA_NEG_INF
 
-    with raises(TypeError):
-        assert DATETIME_NEG_INF < timedelta
-    with raises(TypeError):
-        assert DATETIME_NEG_INF <= timedelta
-    with raises(TypeError):
-        assert DATETIME_NEG_INF > timedelta
-    with raises(TypeError):
-        assert DATETIME_NEG_INF >= timedelta
-    assert not DATETIME_NEG_INF == timedelta
-    assert DATETIME_NEG_INF != timedelta
-    assert DATETIME_NEG_INF + timedelta == DATETIME_NEG_INF
-    assert DATETIME_NEG_INF - timedelta == DATETIME_NEG_INF
+@pytest.mark.parametrize(
+    ["lhs", "op", "rhs", "expect"], gen_params(), ids=idfn,
+)
+def test_generated(lhs, op, rhs, expect):
+    try:
+        result = getattr(operator, op)(lhs, rhs)
+    except TypeError:
+        assert expect is TypeError
+    else:
+        assert result == expect
 
-    assert not DATETIME_POS_INF < DATETIME_NEG_INF
-    assert not DATETIME_POS_INF <= DATETIME_NEG_INF
-    assert DATETIME_POS_INF > DATETIME_NEG_INF
-    assert DATETIME_POS_INF >= DATETIME_NEG_INF
-    assert not DATETIME_POS_INF == DATETIME_NEG_INF
-    assert DATETIME_POS_INF != DATETIME_NEG_INF
-    with raises(TypeError):
-        assert DATETIME_POS_INF + DATETIME_NEG_INF
-    assert DATETIME_POS_INF - DATETIME_NEG_INF == TIMEDELTA_POS_INF
 
-    assert not DATETIME_POS_INF < DATETIME_POS_INF
-    assert DATETIME_POS_INF <= DATETIME_POS_INF
-    assert not DATETIME_POS_INF > DATETIME_POS_INF
-    assert DATETIME_POS_INF >= DATETIME_POS_INF
-    assert DATETIME_POS_INF == DATETIME_POS_INF
-    assert not DATETIME_POS_INF != DATETIME_POS_INF
-    with raises(TypeError):
-        assert DATETIME_POS_INF + DATETIME_POS_INF
-    with raises(TypeError):
-        assert DATETIME_POS_INF - DATETIME_POS_INF
+def test_is_finite():
+    assert not is_finite(DATETIME_NEG_INF)
+    assert not is_finite(DATETIME_POS_INF)
+    assert not is_finite(DATE_NEG_INF)
+    assert not is_finite(DATE_POS_INF)
+    assert not is_finite(TIMEDELTA_NEG_INF)
+    assert not is_finite(TIMEDELTA_POS_INF)
+    assert is_finite(dt.datetime.now())
+    assert is_finite(dt.date.today())
+    assert is_finite(dt.timedelta())
+    with pytest.raises(TypeError):
+        is_finite(True)
 
-    with raises(TypeError):
-        assert DATETIME_POS_INF < TIMEDELTA_NEG_INF
-    with raises(TypeError):
-        assert DATETIME_POS_INF <= TIMEDELTA_NEG_INF
-    with raises(TypeError):
-        assert DATETIME_POS_INF > TIMEDELTA_NEG_INF
-    with raises(TypeError):
-        assert DATETIME_POS_INF >= TIMEDELTA_NEG_INF
-    assert not DATETIME_POS_INF == TIMEDELTA_NEG_INF
-    assert DATETIME_POS_INF != TIMEDELTA_NEG_INF
-    with raises(TypeError):
-        assert DATETIME_POS_INF + TIMEDELTA_NEG_INF
-    assert DATETIME_POS_INF - TIMEDELTA_NEG_INF == DATETIME_POS_INF
 
-    with raises(TypeError):
-        assert DATETIME_POS_INF < TIMEDELTA_POS_INF
-    with raises(TypeError):
-        assert DATETIME_POS_INF <= TIMEDELTA_POS_INF
-    with raises(TypeError):
-        assert DATETIME_POS_INF > TIMEDELTA_POS_INF
-    with raises(TypeError):
-        assert DATETIME_POS_INF >= TIMEDELTA_POS_INF
-    assert not DATETIME_POS_INF == TIMEDELTA_POS_INF
-    assert DATETIME_POS_INF != TIMEDELTA_POS_INF
-    assert DATETIME_POS_INF + TIMEDELTA_POS_INF == DATETIME_POS_INF
-    with raises(TypeError):
-        assert DATETIME_POS_INF - TIMEDELTA_POS_INF
+def test_timezones():
+    naive_time = dt.datetime.utcnow()
+    aware_time = pytz.timezone("Australia/Perth").localize(naive_time)
+    assert (aware_time + TIMEDELTA_POS_INF).utcoffset() == aware_time.utcoffset()
+    assert (naive_time + TIMEDELTA_POS_INF).utcoffset() is None
 
-    assert not DATETIME_POS_INF < datetime
-    assert not DATETIME_POS_INF <= datetime
-    assert DATETIME_POS_INF > datetime
-    assert DATETIME_POS_INF >= datetime
-    assert not DATETIME_POS_INF == datetime
-    assert DATETIME_POS_INF != datetime
-    with raises(TypeError):
-        assert DATETIME_POS_INF + datetime
-    assert DATETIME_POS_INF - datetime == TIMEDELTA_POS_INF
 
-    with raises(TypeError):
-        assert DATETIME_POS_INF < timedelta
-    with raises(TypeError):
-        assert DATETIME_POS_INF <= timedelta
-    with raises(TypeError):
-        assert DATETIME_POS_INF > timedelta
-    with raises(TypeError):
-        assert DATETIME_POS_INF >= timedelta
-    assert not DATETIME_POS_INF == timedelta
-    assert DATETIME_POS_INF != timedelta
-    assert DATETIME_POS_INF + timedelta == DATETIME_POS_INF
-    assert DATETIME_POS_INF - timedelta == DATETIME_POS_INF
+def test_negation():
+    assert -DATETIME_NEG_INF == DATETIME_POS_INF
+    assert -DATE_NEG_INF == DATE_POS_INF
+    assert -TIMEDELTA_NEG_INF == TIMEDELTA_POS_INF
 
-    with raises(TypeError):
-        assert TIMEDELTA_NEG_INF < DATETIME_NEG_INF
-    with raises(TypeError):
-        assert TIMEDELTA_NEG_INF <= DATETIME_NEG_INF
-    with raises(TypeError):
-        assert TIMEDELTA_NEG_INF > DATETIME_NEG_INF
-    with raises(TypeError):
-        assert TIMEDELTA_NEG_INF >= DATETIME_NEG_INF
-    assert not TIMEDELTA_NEG_INF == DATETIME_NEG_INF
-    assert TIMEDELTA_NEG_INF != DATETIME_NEG_INF
-    assert TIMEDELTA_NEG_INF + DATETIME_NEG_INF == DATETIME_NEG_INF
-    with raises(TypeError):
-        assert TIMEDELTA_NEG_INF - DATETIME_NEG_INF
 
-    with raises(TypeError):
-        assert TIMEDELTA_NEG_INF < DATETIME_POS_INF
-    with raises(TypeError):
-        assert TIMEDELTA_NEG_INF <= DATETIME_POS_INF
-    with raises(TypeError):
-        assert TIMEDELTA_NEG_INF > DATETIME_POS_INF
-    with raises(TypeError):
-        assert TIMEDELTA_NEG_INF >= DATETIME_POS_INF
-    assert not TIMEDELTA_NEG_INF == DATETIME_POS_INF
-    assert TIMEDELTA_NEG_INF != DATETIME_POS_INF
-    with raises(TypeError):
-        assert TIMEDELTA_NEG_INF + DATETIME_POS_INF
-    with raises(TypeError):
-        assert TIMEDELTA_NEG_INF - DATETIME_POS_INF
-
-    assert not TIMEDELTA_NEG_INF < TIMEDELTA_NEG_INF
-    assert TIMEDELTA_NEG_INF <= TIMEDELTA_NEG_INF
-    assert not TIMEDELTA_NEG_INF > TIMEDELTA_NEG_INF
-    assert TIMEDELTA_NEG_INF >= TIMEDELTA_NEG_INF
-    assert TIMEDELTA_NEG_INF == TIMEDELTA_NEG_INF
-    assert not TIMEDELTA_NEG_INF != TIMEDELTA_NEG_INF
-    assert TIMEDELTA_NEG_INF + TIMEDELTA_NEG_INF == TIMEDELTA_NEG_INF
-    with raises(TypeError):
-        assert TIMEDELTA_NEG_INF - TIMEDELTA_NEG_INF
-
-    assert TIMEDELTA_NEG_INF < TIMEDELTA_POS_INF
-    assert TIMEDELTA_NEG_INF <= TIMEDELTA_POS_INF
-    assert not TIMEDELTA_NEG_INF > TIMEDELTA_POS_INF
-    assert not TIMEDELTA_NEG_INF >= TIMEDELTA_POS_INF
-    assert not TIMEDELTA_NEG_INF == TIMEDELTA_POS_INF
-    assert TIMEDELTA_NEG_INF != TIMEDELTA_POS_INF
-    with raises(TypeError):
-        assert TIMEDELTA_NEG_INF + TIMEDELTA_POS_INF
-    assert TIMEDELTA_NEG_INF - TIMEDELTA_POS_INF == TIMEDELTA_NEG_INF
-
-    with raises(TypeError):
-        assert TIMEDELTA_NEG_INF < datetime
-    with raises(TypeError):
-        assert TIMEDELTA_NEG_INF <= datetime
-    with raises(TypeError):
-        assert TIMEDELTA_NEG_INF > datetime
-    with raises(TypeError):
-        assert TIMEDELTA_NEG_INF >= datetime
-    assert not TIMEDELTA_NEG_INF == datetime
-    assert TIMEDELTA_NEG_INF != datetime
-    assert TIMEDELTA_NEG_INF + datetime == DATETIME_NEG_INF
-    with raises(TypeError):
-        assert TIMEDELTA_NEG_INF - datetime
-
-    assert TIMEDELTA_NEG_INF < timedelta
-    assert TIMEDELTA_NEG_INF <= timedelta
-    assert not TIMEDELTA_NEG_INF > timedelta
-    assert not TIMEDELTA_NEG_INF >= timedelta
-    assert not TIMEDELTA_NEG_INF == timedelta
-    assert TIMEDELTA_NEG_INF != timedelta
-    assert TIMEDELTA_NEG_INF + timedelta == TIMEDELTA_NEG_INF
-    assert TIMEDELTA_NEG_INF - timedelta == TIMEDELTA_NEG_INF
-
-    with raises(TypeError):
-        assert TIMEDELTA_POS_INF < DATETIME_NEG_INF
-    with raises(TypeError):
-        assert TIMEDELTA_POS_INF <= DATETIME_NEG_INF
-    with raises(TypeError):
-        assert TIMEDELTA_POS_INF > DATETIME_NEG_INF
-    with raises(TypeError):
-        assert TIMEDELTA_POS_INF >= DATETIME_NEG_INF
-    assert not TIMEDELTA_POS_INF == DATETIME_NEG_INF
-    assert TIMEDELTA_POS_INF != DATETIME_NEG_INF
-    with raises(TypeError):
-        assert TIMEDELTA_POS_INF + DATETIME_NEG_INF
-    with raises(TypeError):
-        assert TIMEDELTA_POS_INF - DATETIME_NEG_INF
-
-    with raises(TypeError):
-        assert TIMEDELTA_POS_INF < DATETIME_POS_INF
-    with raises(TypeError):
-        assert TIMEDELTA_POS_INF <= DATETIME_POS_INF
-    with raises(TypeError):
-        assert TIMEDELTA_POS_INF > DATETIME_POS_INF
-    with raises(TypeError):
-        assert TIMEDELTA_POS_INF >= DATETIME_POS_INF
-    assert not TIMEDELTA_POS_INF == DATETIME_POS_INF
-    assert TIMEDELTA_POS_INF != DATETIME_POS_INF
-    assert TIMEDELTA_POS_INF + DATETIME_POS_INF == DATETIME_POS_INF
-    with raises(TypeError):
-        assert TIMEDELTA_POS_INF - DATETIME_POS_INF
-
-    assert not TIMEDELTA_POS_INF < TIMEDELTA_NEG_INF
-    assert not TIMEDELTA_POS_INF <= TIMEDELTA_NEG_INF
-    assert TIMEDELTA_POS_INF > TIMEDELTA_NEG_INF
-    assert TIMEDELTA_POS_INF >= TIMEDELTA_NEG_INF
-    assert not TIMEDELTA_POS_INF == TIMEDELTA_NEG_INF
-    assert TIMEDELTA_POS_INF != TIMEDELTA_NEG_INF
-    with raises(TypeError):
-        assert TIMEDELTA_POS_INF + TIMEDELTA_NEG_INF
-    assert TIMEDELTA_POS_INF - TIMEDELTA_NEG_INF == TIMEDELTA_POS_INF
-
-    assert not TIMEDELTA_POS_INF < TIMEDELTA_POS_INF
-    assert TIMEDELTA_POS_INF <= TIMEDELTA_POS_INF
-    assert not TIMEDELTA_POS_INF > TIMEDELTA_POS_INF
-    assert TIMEDELTA_POS_INF >= TIMEDELTA_POS_INF
-    assert TIMEDELTA_POS_INF == TIMEDELTA_POS_INF
-    assert not TIMEDELTA_POS_INF != TIMEDELTA_POS_INF
-    assert TIMEDELTA_POS_INF + TIMEDELTA_POS_INF == TIMEDELTA_POS_INF
-    with raises(TypeError):
-        assert TIMEDELTA_POS_INF - TIMEDELTA_POS_INF
-
-    with raises(TypeError):
-        assert TIMEDELTA_POS_INF < datetime
-    with raises(TypeError):
-        assert TIMEDELTA_POS_INF <= datetime
-    with raises(TypeError):
-        assert TIMEDELTA_POS_INF > datetime
-    with raises(TypeError):
-        assert TIMEDELTA_POS_INF >= datetime
-    assert not TIMEDELTA_POS_INF == datetime
-    assert TIMEDELTA_POS_INF != datetime
-    assert TIMEDELTA_POS_INF + datetime == DATETIME_POS_INF
-    with raises(TypeError):
-        assert TIMEDELTA_POS_INF - datetime
-
-    assert not TIMEDELTA_POS_INF < timedelta
-    assert not TIMEDELTA_POS_INF <= timedelta
-    assert TIMEDELTA_POS_INF > timedelta
-    assert TIMEDELTA_POS_INF >= timedelta
-    assert not TIMEDELTA_POS_INF == timedelta
-    assert TIMEDELTA_POS_INF != timedelta
-    assert TIMEDELTA_POS_INF + timedelta == TIMEDELTA_POS_INF
-    assert TIMEDELTA_POS_INF - timedelta == TIMEDELTA_POS_INF
-
-    assert not datetime < DATETIME_NEG_INF
-    assert not datetime <= DATETIME_NEG_INF
-    assert datetime > DATETIME_NEG_INF
-    assert datetime >= DATETIME_NEG_INF
-    assert not datetime == DATETIME_NEG_INF
-    assert datetime != DATETIME_NEG_INF
-    with raises(TypeError):
-        assert datetime + DATETIME_NEG_INF
-    assert datetime - DATETIME_NEG_INF == TIMEDELTA_POS_INF
-
-    assert datetime < DATETIME_POS_INF
-    assert datetime <= DATETIME_POS_INF
-    assert not datetime > DATETIME_POS_INF
-    assert not datetime >= DATETIME_POS_INF
-    assert not datetime == DATETIME_POS_INF
-    assert datetime != DATETIME_POS_INF
-    with raises(TypeError):
-        assert datetime + DATETIME_POS_INF
-    assert datetime - DATETIME_POS_INF == TIMEDELTA_NEG_INF
-
-    with raises(TypeError):
-        assert datetime < TIMEDELTA_NEG_INF
-    with raises(TypeError):
-        assert datetime <= TIMEDELTA_NEG_INF
-    with raises(TypeError):
-        assert datetime > TIMEDELTA_NEG_INF
-    with raises(TypeError):
-        assert datetime >= TIMEDELTA_NEG_INF
-    assert not datetime == TIMEDELTA_NEG_INF
-    assert datetime != TIMEDELTA_NEG_INF
-    assert datetime + TIMEDELTA_NEG_INF == DATETIME_NEG_INF
-    assert datetime - TIMEDELTA_NEG_INF == DATETIME_POS_INF
-
-    with raises(TypeError):
-        assert datetime < TIMEDELTA_POS_INF
-    with raises(TypeError):
-        assert datetime <= TIMEDELTA_POS_INF
-    with raises(TypeError):
-        assert datetime > TIMEDELTA_POS_INF
-    with raises(TypeError):
-        assert datetime >= TIMEDELTA_POS_INF
-    assert not datetime == TIMEDELTA_POS_INF
-    assert datetime != TIMEDELTA_POS_INF
-    assert datetime + TIMEDELTA_POS_INF == DATETIME_POS_INF
-    assert datetime - TIMEDELTA_POS_INF == DATETIME_NEG_INF
-
-    with raises(TypeError):
-        assert timedelta < DATETIME_NEG_INF
-    with raises(TypeError):
-        assert timedelta <= DATETIME_NEG_INF
-    with raises(TypeError):
-        assert timedelta > DATETIME_NEG_INF
-    with raises(TypeError):
-        assert timedelta >= DATETIME_NEG_INF
-    assert not timedelta == DATETIME_NEG_INF
-    assert timedelta != DATETIME_NEG_INF
-    assert timedelta + DATETIME_NEG_INF == DATETIME_NEG_INF
-    with raises(TypeError):
-        assert timedelta - DATETIME_NEG_INF
-
-    with raises(TypeError):
-        assert timedelta < DATETIME_POS_INF
-    with raises(TypeError):
-        assert timedelta <= DATETIME_POS_INF
-    with raises(TypeError):
-        assert timedelta > DATETIME_POS_INF
-    with raises(TypeError):
-        assert timedelta >= DATETIME_POS_INF
-    assert not timedelta == DATETIME_POS_INF
-    assert timedelta != DATETIME_POS_INF
-    assert timedelta + DATETIME_POS_INF == DATETIME_POS_INF
-    with raises(TypeError):
-        assert timedelta - DATETIME_POS_INF
-
-    assert not timedelta < TIMEDELTA_NEG_INF
-    assert not timedelta <= TIMEDELTA_NEG_INF
-    assert timedelta > TIMEDELTA_NEG_INF
-    assert timedelta >= TIMEDELTA_NEG_INF
-    assert not timedelta == TIMEDELTA_NEG_INF
-    assert timedelta != TIMEDELTA_NEG_INF
-    assert timedelta + TIMEDELTA_NEG_INF == TIMEDELTA_NEG_INF
-    assert timedelta - TIMEDELTA_NEG_INF == TIMEDELTA_POS_INF
-
-    assert timedelta < TIMEDELTA_POS_INF
-    assert timedelta <= TIMEDELTA_POS_INF
-    assert not timedelta > TIMEDELTA_POS_INF
-    assert not timedelta >= TIMEDELTA_POS_INF
-    assert not timedelta == TIMEDELTA_POS_INF
-    assert timedelta != TIMEDELTA_POS_INF
-    assert timedelta + TIMEDELTA_POS_INF == TIMEDELTA_POS_INF
-    assert timedelta - TIMEDELTA_POS_INF == TIMEDELTA_NEG_INF
+def test_datetime():
+    assert DATETIME_POS_INF.date() == DATE_POS_INF
+    assert DATETIME_NEG_INF.date() == DATE_NEG_INF

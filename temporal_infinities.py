@@ -1,41 +1,60 @@
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 
-class DatetimeInfinity(object):
-    def __init__(self, positive):
+class TemporalInfinity(object):
+
+    comparison_type = None
+
+    def __init__(self, positive, tzinfo=None):
         self.positive = positive
+        self.tzinfo = tzinfo
+
+    def __hash__(self):
+        return hash((self.__class__, self.positive, self.tzinfo))
 
     def __repr__(self):
-        return "DatetimeInfinity(positive=%s)" % self.positive
+        return "%s_%s_INF" % (
+            self.comparison_type.__name__.upper(),
+            "POS" if self.positive else "NEG",
+        )
+
+    def utcoffset(self):
+        if self.tzinfo is None:
+            return None
+        return self.tzinfo.utcoffset(self)
 
     def __eq__(self, other):
-        return isinstance(other, DatetimeInfinity) and other.positive == self.positive
+        return (
+            isinstance(other, self.__class__)
+            and other.positive == self.positive
+            and other.tzinfo == self.tzinfo
+        )
 
     def __lt__(self, other):
-        if isinstance(other, datetime):
+        if isinstance(other, self.comparison_type):
             return not self.positive
-        elif isinstance(other, DatetimeInfinity):
+        elif isinstance(other, self.__class__):
             return other.positive and not self.positive
         return NotImplemented
 
     def __le__(self, other):
-        if isinstance(other, datetime):
+        if isinstance(other, self.comparison_type):
             return not self.positive
-        elif isinstance(other, DatetimeInfinity):
+        elif isinstance(other, self.__class__):
             return not self.positive or self.positive == other.positive
         return NotImplemented
 
     def __gt__(self, other):
-        if isinstance(other, datetime):
+        if isinstance(other, self.comparison_type):
             return self.positive
-        elif isinstance(other, DatetimeInfinity):
+        elif isinstance(other, self.__class__):
             return self.positive and not other.positive
         return NotImplemented
 
     def __ge__(self, other):
-        if isinstance(other, datetime):
+        if isinstance(other, self.comparison_type):
             return self.positive
-        if isinstance(other, DatetimeInfinity):
+        if isinstance(other, self.__class__):
             return self.positive or self.positive == other.positive
         return NotImplemented
 
@@ -54,27 +73,44 @@ class DatetimeInfinity(object):
             return self
         elif isinstance(other, TimedeltaInfinity) and self.positive != other.positive:
             return self
-        elif isinstance(other, datetime):
-            return TIMEDELTA_POS_INF if self.positive else TIMEDELTA_NEG_INF
-        elif isinstance(other, DatetimeInfinity) and self.positive != other.positive:
-            return TIMEDELTA_POS_INF if self.positive else TIMEDELTA_NEG_INF
+        elif isinstance(other, self.comparison_type):
+            return TimedeltaInfinity(self.positive)
+        elif isinstance(other, self.__class__) and self.positive != other.positive:
+            return TimedeltaInfinity(self.positive)
         return NotImplemented
 
     def __rsub__(self, other):
-        if isinstance(other, datetime):
-            return TIMEDELTA_NEG_INF if self.positive else TIMEDELTA_POS_INF
+        if isinstance(other, self.comparison_type):
+            return TimedeltaInfinity(not self.positive)
         return NotImplemented
 
     def __neg__(self):
-        return DATETIME_NEG_INF if self.positive else DATETIME_POS_INF
+        return self.__class__(not self.positive)
+
+
+class DateInfinity(TemporalInfinity):
+    comparison_type = date
+
+    def __init__(self, positive):
+        super(DateInfinity, self).__init__(positive)
+
+
+class DatetimeInfinity(TemporalInfinity):
+    comparison_type = datetime
+
+    def date(self):
+        return DateInfinity(self.positive)
 
 
 class TimedeltaInfinity(object):
     def __init__(self, positive=True):
         self.positive = positive
 
+    def __hash__(self):
+        return hash((self.__class__, self.positive))
+
     def __repr__(self):
-        return "%sTimedeltaInfinity()" % ("" if self.positive else "-")
+        return "TIMEDELTA_%s_INF" % ("POS" if self.positive else "NEG")
 
     def __eq__(self, other):
         return isinstance(other, TimedeltaInfinity) and other.positive == self.positive
@@ -111,7 +147,9 @@ class TimedeltaInfinity(object):
         if isinstance(other, timedelta):
             return self
         elif isinstance(other, datetime):
-            return DATETIME_POS_INF if self.positive else DATETIME_NEG_INF
+            return DatetimeInfinity(self.positive, tzinfo=other.tzinfo)
+        elif isinstance(other, date):
+            return DateInfinity(self.positive)
         elif isinstance(other, TimedeltaInfinity) and self.positive == other.positive:
             return self
         return NotImplemented
@@ -130,13 +168,17 @@ class TimedeltaInfinity(object):
         if isinstance(other, timedelta):
             return -self
         elif isinstance(other, datetime):
-            return DATETIME_NEG_INF if self.positive else DATETIME_POS_INF
+            return DatetimeInfinity(not self.positive, tzinfo=other.tzinfo)
+        elif isinstance(other, date):
+            return DateInfinity(not self.positive)
         return NotImplemented
 
     def __neg__(self):
-        return TIMEDELTA_NEG_INF if self.positive else TIMEDELTA_POS_INF
+        return self.__class__(not self.positive)
 
 
+DATE_POS_INF = DateInfinity(positive=True)
+DATE_NEG_INF = DateInfinity(positive=False)
 DATETIME_POS_INF = DatetimeInfinity(positive=True)
 DATETIME_NEG_INF = DatetimeInfinity(positive=False)
 TIMEDELTA_POS_INF = TimedeltaInfinity(positive=True)
@@ -144,9 +186,9 @@ TIMEDELTA_NEG_INF = TimedeltaInfinity(positive=False)
 
 
 def is_finite(value):
-    if isinstance(value, (datetime, timedelta)):
+    if isinstance(value, (date, datetime, timedelta)):
         return True
-    if isinstance(value, (DatetimeInfinity, TimedeltaInfinity)):
+    if isinstance(value, (TemporalInfinity, TimedeltaInfinity)):
         return False
     else:
-        return TypeError("is_finite called with non-temporal type")
+        raise TypeError("is_finite called with non-temporal type")
