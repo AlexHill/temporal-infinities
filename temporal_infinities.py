@@ -5,6 +5,8 @@ class TemporalInfinity(object):
 
     comparison_type = None
 
+    __slots__ = ["positive", "tzinfo"]
+
     def __init__(self, positive, tzinfo=None):
         self.positive = positive
         self.tzinfo = tzinfo
@@ -103,6 +105,9 @@ class DatetimeInfinity(TemporalInfinity):
 
 
 class TimedeltaInfinity(object):
+
+    __slots__ = ["positive"]
+
     def __init__(self, positive=True):
         self.positive = positive
 
