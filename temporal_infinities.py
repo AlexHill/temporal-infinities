@@ -10,7 +10,7 @@ class TemporalInfinity(object):
         self.tzinfo = tzinfo
 
     def __hash__(self):
-        return hash((self.__class__, self.positive, self.tzinfo))
+        return hash((self.positive, self.tzinfo))
 
     def __repr__(self):
         return "%s_%s_INF" % (
@@ -107,7 +107,7 @@ class TimedeltaInfinity(object):
         self.positive = positive
 
     def __hash__(self):
-        return hash((self.__class__, self.positive))
+        return hash(self.positive)
 
     def __repr__(self):
         return "TIMEDELTA_%s_INF" % ("POS" if self.positive else "NEG")
