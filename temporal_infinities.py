@@ -27,7 +27,7 @@ class TemporalInfinity(object):
 
     def __eq__(self, other):
         return (
-            isinstance(other, self.__class__)
+            isinstance(self, other.__class__)
             and other.positive == self.positive
             and other.tzinfo == self.tzinfo
         )
@@ -35,28 +35,28 @@ class TemporalInfinity(object):
     def __lt__(self, other):
         if isinstance(other, self.comparison_type):
             return not self.positive
-        elif isinstance(other, self.__class__):
+        elif isinstance(self, other.__class__):
             return other.positive and not self.positive
         return NotImplemented
 
     def __le__(self, other):
         if isinstance(other, self.comparison_type):
             return not self.positive
-        elif isinstance(other, self.__class__):
+        elif isinstance(self, other.__class__):
             return not self.positive or self.positive == other.positive
         return NotImplemented
 
     def __gt__(self, other):
         if isinstance(other, self.comparison_type):
             return self.positive
-        elif isinstance(other, self.__class__):
+        elif isinstance(self, other.__class__):
             return self.positive and not other.positive
         return NotImplemented
 
     def __ge__(self, other):
         if isinstance(other, self.comparison_type):
             return self.positive
-        if isinstance(other, self.__class__):
+        if isinstance(self, other.__class__):
             return self.positive or self.positive == other.positive
         return NotImplemented
 
@@ -77,7 +77,7 @@ class TemporalInfinity(object):
             return self
         elif isinstance(other, self.comparison_type):
             return TimedeltaInfinity(self.positive)
-        elif isinstance(other, self.__class__) and self.positive != other.positive:
+        elif isinstance(self, other.__class__) and self.positive != other.positive:
             return TimedeltaInfinity(self.positive)
         return NotImplemented
 
@@ -179,7 +179,7 @@ class TimedeltaInfinity(object):
         return NotImplemented
 
     def __neg__(self):
-        return self.__class__(not self.positive)
+        return TimedeltaInfinity(not self.positive)
 
 
 DATE_POS_INF = DateInfinity(positive=True)
