@@ -6,29 +6,28 @@ import pytest
 import pytz
 
 from temporal_infinities import (
-    DATE_NEG_INF,
-    DATE_POS_INF,
-    DATETIME_NEG_INF,
-    DATETIME_POS_INF,
-    TIMEDELTA_NEG_INF,
-    TIMEDELTA_POS_INF,
+    DATE_INF_PAST,
+    DATE_INF_FUTURE,
+    DATETIME_INF_PAST,
+    DATETIME_INF_FUTURE,
+    TIMEDELTA_INF,
     TemporalInfinity,
     TimedeltaInfinity,
     is_finite,
 )
 
 operand_map = {
-    (dt.datetime, "NEG_INF"): DATETIME_NEG_INF,
-    (dt.datetime, "POS_INF"): DATETIME_POS_INF,
+    (dt.datetime, "NEG_INF"): DATETIME_INF_PAST,
+    (dt.datetime, "POS_INF"): DATETIME_INF_FUTURE,
     (dt.datetime, "FINITE"): dt.datetime.now(),
-    (dt.datetime, "DELTA_NEG_INF"): TIMEDELTA_NEG_INF,
-    (dt.datetime, "DELTA_POS_INF"): TIMEDELTA_POS_INF,
+    (dt.datetime, "DELTA_NEG_INF"): -TIMEDELTA_INF,
+    (dt.datetime, "DELTA_POS_INF"): TIMEDELTA_INF,
     (dt.datetime, "DELTA_FINITE"): dt.timedelta(),
-    (dt.date, "NEG_INF"): DATE_NEG_INF,
-    (dt.date, "POS_INF"): DATE_POS_INF,
+    (dt.date, "NEG_INF"): DATE_INF_PAST,
+    (dt.date, "POS_INF"): DATE_INF_FUTURE,
     (dt.date, "FINITE"): dt.date.today(),
-    (dt.date, "DELTA_NEG_INF"): TIMEDELTA_NEG_INF,
-    (dt.date, "DELTA_POS_INF"): TIMEDELTA_POS_INF,
+    (dt.date, "DELTA_NEG_INF"): -TIMEDELTA_INF,
+    (dt.date, "DELTA_POS_INF"): TIMEDELTA_INF,
     (dt.date, "DELTA_FINITE"): dt.timedelta(),
 }
 
@@ -91,12 +90,12 @@ def test_generated(lhs, op, rhs, expect):
 
 
 def test_is_finite():
-    assert not is_finite(DATETIME_NEG_INF)
-    assert not is_finite(DATETIME_POS_INF)
-    assert not is_finite(DATE_NEG_INF)
-    assert not is_finite(DATE_POS_INF)
-    assert not is_finite(TIMEDELTA_NEG_INF)
-    assert not is_finite(TIMEDELTA_POS_INF)
+    assert not is_finite(DATETIME_INF_PAST)
+    assert not is_finite(DATETIME_INF_FUTURE)
+    assert not is_finite(DATE_INF_PAST)
+    assert not is_finite(DATE_INF_FUTURE)
+    assert not is_finite(-TIMEDELTA_INF)
+    assert not is_finite(TIMEDELTA_INF)
     assert is_finite(dt.datetime.now())
     assert is_finite(dt.date.today())
     assert is_finite(dt.timedelta())
@@ -107,16 +106,16 @@ def test_is_finite():
 def test_timezones():
     naive_time = dt.datetime.utcnow()
     aware_time = pytz.timezone("Australia/Perth").localize(naive_time)
-    assert (aware_time + TIMEDELTA_POS_INF).utcoffset() == aware_time.utcoffset()
-    assert (naive_time + TIMEDELTA_POS_INF).utcoffset() is None
+    assert (aware_time + TIMEDELTA_INF).utcoffset() == aware_time.utcoffset()
+    assert (naive_time + TIMEDELTA_INF).utcoffset() is None
 
 
 def test_negation():
-    assert -DATETIME_NEG_INF == DATETIME_POS_INF
-    assert -DATE_NEG_INF == DATE_POS_INF
-    assert -TIMEDELTA_NEG_INF == TIMEDELTA_POS_INF
+    assert -DATETIME_INF_PAST == DATETIME_INF_FUTURE
+    assert -DATE_INF_PAST == DATE_INF_FUTURE
+    assert --TIMEDELTA_INF == TIMEDELTA_INF
 
 
 def test_datetime():
-    assert DATETIME_POS_INF.date() == DATE_POS_INF
-    assert DATETIME_NEG_INF.date() == DATE_NEG_INF
+    assert DATETIME_INF_FUTURE.date() == DATE_INF_FUTURE
+    assert DATETIME_INF_PAST.date() == DATE_INF_PAST

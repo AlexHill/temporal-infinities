@@ -115,7 +115,7 @@ class TimedeltaInfinity(object):
         return hash(self.positive)
 
     def __repr__(self):
-        return "TIMEDELTA_%s_INF" % ("POS" if self.positive else "NEG")
+        return ("" if self.positive else "-") + "TIMEDELTA_INF"
 
     def __eq__(self, other):
         return isinstance(other, TimedeltaInfinity) and other.positive == self.positive
@@ -182,12 +182,11 @@ class TimedeltaInfinity(object):
         return TimedeltaInfinity(not self.positive)
 
 
-DATE_POS_INF = DateInfinity(positive=True)
-DATE_NEG_INF = DateInfinity(positive=False)
-DATETIME_POS_INF = DatetimeInfinity(positive=True)
-DATETIME_NEG_INF = DatetimeInfinity(positive=False)
-TIMEDELTA_POS_INF = TimedeltaInfinity(positive=True)
-TIMEDELTA_NEG_INF = TimedeltaInfinity(positive=False)
+DATE_INF_FUTURE = DateInfinity(positive=True)
+DATE_INF_PAST = DateInfinity(positive=False)
+DATETIME_INF_FUTURE = DatetimeInfinity(positive=True)
+DATETIME_INF_PAST = DatetimeInfinity(positive=False)
+TIMEDELTA_INF = TimedeltaInfinity(positive=True)
 
 
 def is_finite(value):
