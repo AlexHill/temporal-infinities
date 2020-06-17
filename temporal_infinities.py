@@ -1,3 +1,4 @@
+import math
 from datetime import date, datetime, timedelta
 
 
@@ -180,6 +181,42 @@ class TimedeltaInfinity(object):
 
     def __neg__(self):
         return TimedeltaInfinity(not self.positive)
+
+    def __truediv__(self, other):
+        T = type(other)
+        zero = T()
+        if T in [int, float, timedelta]:
+            positive = not (self.positive ^ (other > zero))
+            if other == zero:
+                raise ZeroDivisionError("division by zero")
+            if T is timedelta:
+                return float("inf") if positive else float("-inf")
+            else:
+                return TimedeltaInfinity(positive)
+        return NotImplemented
+
+    def __rtruediv__(self, other):
+        if isinstance(other, int):
+            return 0
+        if isinstance(other, float):
+            return 0.0 if math.copysign(1.0, other) > 0.0 else -0.0
+        if isinstance(other, timedelta):
+            return 0.0 if self.positive else -0.0
+        return NotImplemented
+
+    def __mul__(self, other):
+        T = type(other)
+        zero = T()
+        if T in [int, float]:
+            positive = not (self.positive ^ (other > zero))
+            if other == zero:
+                return timedelta()
+            else:
+                return TimedeltaInfinity(positive)
+        return NotImplemented
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
 
 
 DATE_INF_FUTURE = DateInfinity(positive=True)

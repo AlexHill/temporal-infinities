@@ -119,3 +119,77 @@ def test_negation():
 def test_datetime():
     assert DATETIME_INF_FUTURE.date() == DATE_INF_FUTURE
     assert DATETIME_INF_PAST.date() == DATE_INF_PAST
+
+
+def test_div():
+    assert -TIMEDELTA_INF / -1 == TIMEDELTA_INF
+    assert -TIMEDELTA_INF / -1.0 == TIMEDELTA_INF
+    assert -TIMEDELTA_INF / 1 == -TIMEDELTA_INF
+    assert -TIMEDELTA_INF / 1.0 == -TIMEDELTA_INF
+    assert -TIMEDELTA_INF / dt.timedelta(-1) == float("inf")
+    assert -TIMEDELTA_INF / dt.timedelta(1) == -float("inf")
+    assert TIMEDELTA_INF / -1 == -TIMEDELTA_INF
+    assert TIMEDELTA_INF / -1.0 == -TIMEDELTA_INF
+    assert TIMEDELTA_INF / 1 == TIMEDELTA_INF
+    assert TIMEDELTA_INF / 1.0 == TIMEDELTA_INF
+    assert TIMEDELTA_INF / dt.timedelta(-1) == -float("inf")
+    assert TIMEDELTA_INF / dt.timedelta(1) == float("inf")
+
+    with pytest.raises(ZeroDivisionError):
+        -TIMEDELTA_INF / 0
+    with pytest.raises(ZeroDivisionError):
+        -TIMEDELTA_INF / -0.0
+    with pytest.raises(ZeroDivisionError):
+        -TIMEDELTA_INF / 0.0
+    with pytest.raises(ZeroDivisionError):
+        -TIMEDELTA_INF / dt.timedelta(0)
+    with pytest.raises(ZeroDivisionError):
+        TIMEDELTA_INF / 0
+    with pytest.raises(ZeroDivisionError):
+        TIMEDELTA_INF / -0.0
+    with pytest.raises(ZeroDivisionError):
+        TIMEDELTA_INF / 0.0
+    with pytest.raises(ZeroDivisionError):
+        TIMEDELTA_INF / dt.timedelta(0)
+
+
+def test_rdiv():
+    with pytest.raises(TypeError):
+        TIMEDELTA_INF / TIMEDELTA_INF
+    assert dt.timedelta(0) / TIMEDELTA_INF == 0.0
+    assert dt.timedelta(0) / -TIMEDELTA_INF == -0.0
+
+
+def test_mul():
+    assert -0.0 * -TIMEDELTA_INF == dt.timedelta()
+    assert -0.0 * TIMEDELTA_INF == dt.timedelta()
+    assert -1 * -TIMEDELTA_INF == TIMEDELTA_INF
+    assert -1 * TIMEDELTA_INF == -TIMEDELTA_INF
+    assert -1.0 * -TIMEDELTA_INF == TIMEDELTA_INF
+    assert -1.0 * TIMEDELTA_INF == -TIMEDELTA_INF
+    assert 0 * -TIMEDELTA_INF == dt.timedelta()
+    assert 0 * TIMEDELTA_INF == dt.timedelta()
+    assert 0.0 * -TIMEDELTA_INF == dt.timedelta()
+    assert 0.0 * TIMEDELTA_INF == dt.timedelta()
+    assert 1 * -TIMEDELTA_INF == -TIMEDELTA_INF
+    assert 1 * TIMEDELTA_INF == TIMEDELTA_INF
+    assert 1.0 * -TIMEDELTA_INF == -TIMEDELTA_INF
+    assert 1.0 * TIMEDELTA_INF == TIMEDELTA_INF
+
+    assert -TIMEDELTA_INF * -0.0 == dt.timedelta()
+    assert -TIMEDELTA_INF * -1 == TIMEDELTA_INF
+    assert -TIMEDELTA_INF * -1.0 == TIMEDELTA_INF
+    assert -TIMEDELTA_INF * 0 == dt.timedelta()
+    assert -TIMEDELTA_INF * 0.0 == dt.timedelta()
+    assert -TIMEDELTA_INF * 1 == -TIMEDELTA_INF
+    assert -TIMEDELTA_INF * 1.0 == -TIMEDELTA_INF
+    assert TIMEDELTA_INF * -0.0 == dt.timedelta()
+    assert TIMEDELTA_INF * -1 == -TIMEDELTA_INF
+    assert TIMEDELTA_INF * -1.0 == -TIMEDELTA_INF
+    assert TIMEDELTA_INF * 0 == dt.timedelta()
+    assert TIMEDELTA_INF * 0.0 == dt.timedelta()
+    assert TIMEDELTA_INF * 1 == TIMEDELTA_INF
+    assert TIMEDELTA_INF * 1.0 == TIMEDELTA_INF
+
+    with pytest.raises(TypeError):
+        TIMEDELTA_INF * TIMEDELTA_INF
