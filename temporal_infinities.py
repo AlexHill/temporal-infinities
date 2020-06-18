@@ -27,11 +27,7 @@ class TemporalInfinity(object):
         return self.tzinfo.utcoffset(self)
 
     def __eq__(self, other):
-        return (
-            isinstance(self, other.__class__)
-            and other.positive == self.positive
-            and other.tzinfo == self.tzinfo
-        )
+        return isinstance(self, other.__class__) and other.positive == self.positive
 
     def __lt__(self, other):
         if isinstance(other, self.comparison_type):
@@ -103,6 +99,20 @@ class DatetimeInfinity(TemporalInfinity):
 
     def date(self):
         return DateInfinity(self.positive)
+
+    def replace(self, **kwargs):
+        missing = object()
+        tzinfo = kwargs.pop("tzinfo", missing)
+        for k in kwargs:
+            raise TypeError(
+                "replace() on DateTime types does not support the '%s' argument" % k
+            )
+        if tzinfo is missing:
+            return self
+        return self.__class__(self.positive, tzinfo)
+
+    def astimezone(self, tzinfo):
+        return self.__class__(self.positive, tzinfo)
 
 
 class TimedeltaInfinity(object):
